@@ -1,6 +1,7 @@
+from torch.autograd import Variable
 
 
-def validate(evalData, model, criterion, gpu=True, val_loss=[]):
+def validate(evalData, model, criterion, weights, gpu=True, val_loss=[]):
     model.eval()
     epoch_loss = 0
     i = 0
@@ -32,7 +33,7 @@ def validate(evalData, model, criterion, gpu=True, val_loss=[]):
         s1_loss = criterion(ignore_index=0)(s1_model_out, label)
         s2_loss = criterion(ignore_index=0)(s2_model_out, label)
         fused_loss = criterion(ignore_index=0)(fused_model_out, label)
-        total_loss = (s1_loss * 0.35 + s2_loss * 0.45 + fused_loss * 0.2) / 3
+        total_loss = (s1_loss * weights[0] + s2_loss * weights[1] + fused_loss * weights[2])
         epoch_loss += total_loss.item()
 
         # print("val: ", i, epoch_loss)

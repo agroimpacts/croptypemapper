@@ -1,24 +1,40 @@
 import boto3
+import urllib.parse as urlparse
 import os
+from pathlib import Path
+from datetime import datetime, timedelta
+import torch
+from torch import optim
+from tensorboardX import SummaryWriter
+from Utils import get_optimizer, PolynomialLR
+from .Train import train
+from .Validate import validate
+from .AccuracyEevaluation import accuracy_evaluation
+from .Predict import inference
+
 
 class ModelCompiler:
-    '''
+    """
     Compiler of specified model
-    Attributes:
-        model (''nn.Module''): pytorch model for segmentation
-        classNum (int): output class number of given model
-        buffer (int): distance to sample edges not considered in optimization
-        gpuDevices (list): indices of gpu devices to use
-        params_init (dict): initial model parameters
-    '''
+    Args:
+        model (''nn.Module'') -- pytorch model for segmentation.
+        working_dir (sys.path or str) -- path to the working directory.
+        out_dir (sys.path or str) -- Path to the directory to store output prediction and associated files.
+        gpuDevices (tuple) -- indices of gpu devices to use.
+        br_weights (tuple) -- weights to decide the influence of each triple branches in the LSTM model (e.g. s1, s2, fused).
+        params_init (sys.path or str) -- Path to the saved model parameters to load.
+        freeze_params (list of int) -- list of indices of the trainable layers in the network to freeze the gradients.
+                                       Useful in fine-tunning the model.
+    """
 
-    def __init__(self, model, gpuDevices=[0], params_init=None, freeze_params=None):
+    def __init__(self, model, working_dir, out_dir, gpuDevices=(0),
+                 br_weights=(0.3, 0.3, 0.4), params_init=None, freeze_params=None):
 
         self.s3_client = boto3.client("s3")
-        self.working_dir = config["working_dir"]
-        self.out_dir = config["out_dir"]
-        self.test_label = config["test_label"]
+        self.working_dir = working_dir
+        self.out_dir = out_dir
         self.gpuDevices = gpuDevices
+        self.br_weights = br_weights
         self.model = model
 
         self.model_name = self.model.__class__.__name__
@@ -83,7 +99,9 @@ class ModelCompiler:
                 if i in freeze_params:
                     p.requires_grad = False
 
-    def fit(self, trainDataset, valDataset, epochs, optimizer_name, lr_init, LR_policy, criterion, momentum=None):
+    def fit(self, trainDataset, valDataset, epochs, optimizer_name, lr_init,
+            LR_policy, criterion, momentum=None):
+
 
         # Set the folder to save results.
         working_dir = self.working_dir
@@ -128,14 +146,18 @@ class ModelCompiler:
         if isinstance(criterion, tuple) or isinstance(criterion, list):
             train_criterion = criterion[0]
             val_criterion = criterion[1]
+        else:
+            train_criterion = criterion
+            val_criterion = criterion
 
         for t in range(epochs):
 
             print("[{}/{}]".format(t + 1, epochs))
             # start fitting
             start_epoch = datetime.now()
-            train(trainDataset, self.model, train_criterion, optimizer, gpu=self.gpu, train_loss=train_loss)
-            validate(valDataset, self.model, val_criterion, gpu=self.gpu, val_loss=val_loss)
+            train(trainDataset, self.model, train_criterion, optimizer, self.br_weights, gpu=self.gpu,
+                  train_loss=train_loss)
+            validate(valDataset, self.model, val_criterion, self.br_weights, gpu=self.gpu, val_loss=val_loss)
 
             # Update the scheduler
             if LR_policy in ["StepLR", "Exponential"]:
@@ -168,7 +190,7 @@ class ModelCompiler:
         print("--------------- Start evaluation ---------------")
         start = datetime.now()
 
-        accuracy_evaluation(evalDataset, self.model, self.gpu, outPrefix, bucket)
+        accuracy_evaluation(evalDataset, self.model, self.gpu, outPrefix, self.br_weights, bucket)
 
         print("--------------- Evaluation finished in {}s ---------------".format((datetime.now() - start).seconds))
 
@@ -190,17 +212,17 @@ class ModelCompiler:
 
         os.chdir(Path(out_prefix))
 
-        inference(predDataset, self.model, prefix_soft, prefix_hard, gpu=self.gpu, test_label=self.test_label)
+        inference(predDataset, self.model, prefix_soft, prefix_hard, gpu=self.gpu, weights=self.br_weights)
 
         duration_in_sec = (datetime.now() - start).seconds
         duration_format = str(timedelta(seconds=duration_in_sec))
         print("-------------------------- Inference finished in {}s --------------------------".format(duration_format))
 
-    def save(self, save_fldr, bucket=None, object="params"):
+    def save(self, save_fldr, bucket=None, save_object="params"):
 
         outPrefix = Path(self.working_dir) / self.out_dir / save_fldr
 
-        if object == "params":
+        if save_object == "params":
 
             fn_params = "{}_params.pth".format(self.model_name)
 
@@ -222,7 +244,7 @@ class ModelCompiler:
                 torch.save(self.model.state_dict(), Path(outPrefix) / fn_params)
                 print("model parameters is saved locally, at ", outPrefix)
 
-        elif object == "model":
+        elif save_object == "model":
 
             fn_model = "{}.pth".format(self.model_name)
 
@@ -234,15 +256,16 @@ class ModelCompiler:
                                            Key=os.path.join(outPrefix, fn_model))
                 print("model uploaded to s3!, at ", outPrefix)
 
-                os.remove(Path(outPrefix) / fn_params)
+                os.remove(Path(outPrefix) / fn_model)
 
             else:
 
                 if not os.path.exists(Path(outPrefix)):
                     os.makedirs(Path(outPrefix))
 
-                torch.save(self.model, Path(outPrefix) / fn_params)
+                torch.save(self.model, Path(outPrefix) / fn_model)
                 print("model saved locally, at ", outPrefix)
 
         else:
             raise ValueError("Object type is not acceptable.")
+

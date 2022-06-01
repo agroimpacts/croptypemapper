@@ -1,7 +1,8 @@
+from torch.autograd import Variable
 
 
+def train(trainData, model, criterion, optimizer, weights, gpu=True, train_loss=[]):
 
-def train(trainData, model, criterion, optimizer, gpu=True, train_loss=[]):
     model.train()
     epoch_loss = 0
     i = 0
@@ -27,11 +28,11 @@ def train(trainData, model, criterion, optimizer, gpu=True, train_loss=[]):
         # total_loss = s1_loss * s1_weight + s2_loss * (1 - s1_weight)
         # epoch_loss += total_loss.item()
 
-        s1_model_out, s2_model_out, fused_model_out = model(s1_img, s2_img)
+        s1_model_out,  s2_model_out, fused_model_out = model(s1_img, s2_img)
         s1_loss = criterion()(s1_model_out, label)
         s2_loss = criterion()(s2_model_out, label)
         fused_loss = criterion()(fused_model_out, label)
-        total_loss = (s1_loss * 0.35 + s2_loss * 0.45 + fused_loss * 0.2) / 3
+        total_loss = (s1_loss * weights[0] + s2_loss * weights[1] + fused_loss * weights[2])
         epoch_loss += total_loss.item()
 
         # print("train: ", i, epoch_loss)
