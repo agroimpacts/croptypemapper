@@ -1,0 +1,37 @@
+---
+working_dir: "C:/My_documents/CropTypeData_Rustowicz/working_folder"
+out_dir: "try_29"
+root_dir: "C:/My_documents/CropTypeData_Rustowicz"
+country: "Ghana"
+lbl_fldrname: "Labels"
+sources: ["Sentinel-1", "Sentinel-2"]
+num_train_pixels: 20000
+num_validation_pixels: 6000
+test_label: False
+batch_train: 128
+batch_val: 1
+
+# Model Compiler
+init_params: None
+gpus: [0]
+input_dims: (4, 11)
+LSTM_hidden_dim: (48, 64)
+CNN_hidden_dim: (48, 64)
+CNN_kernel_size: (5, 5)
+CNN_sequence_length: (57, 67)
+n_classes: 4
+n_LSTM_layers: (2, 4),
+LSTM_lyr_dropout_rate: (0.4, 0.5),
+CNN_lyr_dropout_rate: (0.25, 0.45),
+s1_weight: 0.45,
+
+# Model fitting
+epoch: 10,
+optimizer: "amsgrad",
+momentum: 0.95,
+criterion: (BalancedCrossEntropyLoss, nn.CrossEntropyLoss),
+lr_init: 0.01,
+LR_policy: "",
+bucket: None,
+save_fldr: "model_path",
+prefix_out: "C:/My_documents/CropTypeData_Rustowicz/working_folder/try_28"
