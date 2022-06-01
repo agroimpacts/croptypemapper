@@ -6,7 +6,7 @@ from .Metrics import BinaryMetrics
 from pathlib import Path
 
 
-def accuracy_evaluation(eval_data, model, gpu, out_prefix, bucket=None):
+def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None):
     """
     Evaluate model
     Params:
@@ -39,7 +39,7 @@ def accuracy_evaluation(eval_data, model, gpu, out_prefix, bucket=None):
         # model_out_prob = F.softmax(out_logits, 1)
 
         s1_model_out, s2_model_out, fused_model_out = model(s1_img, s2_img)
-        out_logits = (s1_model_out * 0.35 + s2_model_out * 0.45 + fused_model_out * 0.2)
+        out_logits = s1_model_out * weights[0] + s2_model_out * weights[1] + fused_model_out * weights[2]
         model_out_prob = F.softmax(out_logits, 1)
 
         batch, nclass = model_out_prob.size()

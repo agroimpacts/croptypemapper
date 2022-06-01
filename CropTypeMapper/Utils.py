@@ -7,6 +7,7 @@ import torch
 from random import shuffle
 from torch.utils.data import Sampler
 import torch.nn.utils.rnn as rnn_util
+from torch.optim.lr_scheduler import _LRScheduler
 
 
 def load_data(dataPath, isLabel=False):
@@ -51,6 +52,39 @@ def make_reproducible(seed=42, cudnn=True):
     if cudnn:
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
+
+
+def collate_var_length(batch):
+    batch_size = len(batch)
+
+    s1_max_len = 50
+    s2_max_len = 50
+
+    labels = [batch[i][2] for i in range(batch_size)]
+    label = torch.stack(labels)
+
+    s1_grids = [batch[i][0] for i in range(batch_size)]
+    s2_grids = [batch[i][1] for i in range(batch_size)]
+
+    s1_img = rnn_util.pad_sequence(s1_grids, batch_first=True)
+    s2_img = rnn_util.pad_sequence(s2_grids, batch_first=True)
+
+    return s1_img, s2_img, label
+
+
+def get_optimizer(optimizer, params, lr, momentum):
+
+    optimizer = optimizer.lower()
+    if optimizer == 'sgd':
+        return torch.optim.SGD(params, lr, momentum=momentum)
+    elif optimizer == 'nesterov':
+        return torch.optim.SGD(params, lr, momentum=momentum, nesterov=True)
+    elif optimizer == 'adam':
+        return torch.optim.Adam(params, lr)
+    elif optimizer == 'amsgrad':
+        return torch.optim.Adam(params, lr, amsgrad=True)
+    else:
+        raise ValueError("{} currently not supported, please customize your optimizer in compiler.py".format(optimizer))
 
 
 class CropTypeBatchSampler(Sampler):
@@ -110,19 +144,41 @@ class CropTypeBatchSampler(Sampler):
             yield b
 
 
-def collate_var_length(batch):
-    batch_size = len(batch)
+class PolynomialLR(_LRScheduler):
+    """Polynomial learning rate decay until step reach to max_decay_step
 
-    s1_max_len = 50
-    s2_max_len = 50
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        max_decay_steps: after this step, we stop decreasing learning rate
+        min_learning_rate: scheduler stoping learning rate decay, value of learning rate must be this value
+        power: The power of the polynomial.
+    """
 
-    labels = [batch[i][2] for i in range(batch_size)]
-    label = torch.stack(labels)
+    def __init__(self, optimizer, max_decay_steps, min_learning_rate=1e-5, power=1.0):
+        if max_decay_steps <= 1.:
+            raise ValueError('max_decay_steps should be greater than 1.')
+        self.max_decay_steps = max_decay_steps
+        self.min_learning_rate = min_learning_rate
+        self.power = power
+        self.last_step = 0
+        super().__init__(optimizer)
 
-    s1_grids = [batch[i][0] for i in range(batch_size)]
-    s2_grids = [batch[i][1] for i in range(batch_size)]
+    def get_lr(self):
+        if self.last_step > self.max_decay_steps:
+            return [self.min_learning_rate for _ in self.base_lrs]
 
-    s1_img = rnn_util.pad_sequence(s1_grids, batch_first=True)
-    s2_img = rnn_util.pad_sequence(s2_grids, batch_first=True)
+        return [(base_lr - self.min_learning_rate) *
+                ((1 - self.last_step / self.max_decay_steps) ** (self.power)) +
+                self.min_learning_rate for base_lr in self.base_lrs]
 
-    return s1_img, s2_img, label
+    def step(self, step=None):
+        if step is None:
+            step = self.last_step + 1
+        self.last_step = step if step != 0 else 1
+        if self.last_step <= self.max_decay_steps:
+            decay_lrs = [(base_lr - self.min_learning_rate) *
+                         ((1 - self.last_step / self.max_decay_steps) ** (self.power)) +
+                         self.min_learning_rate for base_lr in self.base_lrs]
+            for param_group, lr in zip(self.optimizer.param_groups, decay_lrs):
+                param_group['lr'] = lr
+
