@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch.nn.functional as F
 from torch.autograd import Variable
-from .Metrics import BinaryMetrics
+from .metrics import BinaryMetrics
 from pathlib import Path
 
 
