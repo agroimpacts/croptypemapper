@@ -5,7 +5,6 @@ from torch.autograd import Variable
 from .metrics import BinaryMetrics
 from pathlib import Path
 
-
 def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None):
     """
     Evaluate model

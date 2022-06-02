@@ -12,7 +12,6 @@ from .validate import validate
 from .accuracy import accuracy_evaluation
 from .predict import inference
 
-
 class ModelCompiler:
     """
     Compiler of specified model
