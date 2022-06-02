@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 import torch
 from torch import optim
 from tensorboardX import SummaryWriter
-from Utils import get_optimizer, PolynomialLR
-from .Train import train
-from .Validate import validate
-from .AccuracyEevaluation import accuracy_evaluation
-from .Predict import inference
+from utils import get_optimizer, PolynomialLR
+from .train import train
+from .validate import validate
+from .accuracy import accuracy_evaluation
+from .predict import inference
 
 
 class ModelCompiler:

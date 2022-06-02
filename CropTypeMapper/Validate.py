@@ -1,6 +1,5 @@
 from torch.autograd import Variable
 
-
 def validate(evalData, model, criterion, weights, gpu=True, val_loss=[]):
     model.eval()
     epoch_loss = 0
