@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import torch
 from torch import optim
 from tensorboardX import SummaryWriter
-from utils import get_optimizer, PolynomialLR
+from .utils import get_optimizer, PolynomialLR
 from .train import train
 from .validate import validate
 from .accuracy import accuracy_evaluation
