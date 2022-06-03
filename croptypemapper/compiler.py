@@ -20,7 +20,8 @@ class ModelCompiler:
         working_dir (sys.path or str) -- path to the working directory.
         out_dir (sys.path or str) -- Path to the directory to store output prediction and associated files.
         gpuDevices (tuple) -- indices of gpu devices to use.
-        br_weights (tuple) -- weights to decide the influence of each triple branches in the LSTM model (e.g. s1, s2, fused).
+        br_weights (tuple) -- weights to decide the influence of each triple branchs
+                              in the LSTM model (e.g. s1, s2, fused).
         params_init (sys.path or str) -- Path to the saved model parameters to load.
         freeze_params (list of int) -- list of indices of the trainable layers in the network to freeze the gradients.
                                        Useful in fine-tunning the model.
@@ -98,9 +99,7 @@ class ModelCompiler:
                 if i in freeze_params:
                     p.requires_grad = False
 
-    def fit(self, trainDataset, valDataset, epochs, optimizer_name, lr_init,
-            LR_policy, criterion, momentum=None):
-
+    def fit(self, trainDataset, valDataset, epochs, optimizer_name, lr_init, LR_policy, criterion, momentum=None):
 
         # Set the folder to save results.
         working_dir = self.working_dir
@@ -179,7 +178,7 @@ class ModelCompiler:
 
         print("--------------- Training finished in {}s ---------------".format((datetime.now() - start).seconds))
 
-    def accuracy_evaluation(self, evalDataset, outPrefix, bucket=None):
+    def accuracy_evaluation(self, evalDataset, outPrefix, weights, bucket=None):
 
         if not os.path.exists(Path(self.working_dir) / self.out_dir):
             os.makedirs(Path(self.working_dir) / self.out_dir)
