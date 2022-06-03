@@ -153,7 +153,7 @@ class pixelDataset(Dataset):
             self.s2 = []
             self.img_coor = []
 
-            s1_dir = Path(root_dir).joinpath("prediction_tiles", self.sources[0])
+            s1_dir = Path(root_dir).joinpath(self.sources[0])
             s1_fnames = [Path(dirpath) / f for (dirpath, dirnames, filenames) in os.walk(s1_dir) for f in filenames if
                          f.endswith(".npy")]
             s1_meta_fnames = [Path(dirpath) / f for (dirpath, dirnames, filenames) in os.walk(s1_dir) for f in filenames
@@ -161,7 +161,7 @@ class pixelDataset(Dataset):
             s1_fnames.sort()
             s1_meta_fnames.sort()
 
-            s2_dir = Path(root_dir).joinpath("prediction_tiles", self.sources[1])
+            s2_dir = Path(root_dir).joinpath(self.sources[1])
             s2_fnames = [Path(dirpath) / f for (dirpath, dirnames, filenames) in os.walk(s2_dir) for f in filenames if
                          f.endswith(".npy") if "source" in f]
             s2_meta_fnames = [Path(dirpath) / f for (dirpath, dirnames, filenames) in os.walk(s2_dir) for f in filenames
