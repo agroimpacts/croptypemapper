@@ -16,15 +16,16 @@ class pixelDataset(Dataset):
             root_dir (str): path to the main folder of the dataset, formatted as indicated in the readme
             usage (str): decide whether we are making a "train", "validation" or "test" dataset.
             num_samples (int) -- Number of samples for each crop type.
-            sampling_strategy (str) -- If ranked samples are only taken from crop pixels with the lowest number of cloudy days.
-                                       Otherwise, a samples can be chosen randomly from the all the available samples for each crop type.
+            sampling_strategy (str) -- If ranked samples are only taken from crop pixels with lowest number of cloudy days.
+                                       Otherwise a samples can be chosen randomly from the all the avilable samples for each crop type.
             sources (list of str): Sensors of image acquisition. At the moment two sensors
                                    are used ["Sentinel-1", "Sentinel-2"]
             inference_index (iterable) : Only gets used at prediction time as a mechanism to go through prediction tiles one at a time.
             verbose (bool): Decide to print extra information on-screen.
     """
 
-    def __init__(self, root_dir, usage, num_samples, sampling_strategy="ranked", sources=("Sentinel-1", "Sentinel-2"),
+    def __init__(self, root_dir, usage, num_samples=None, sampling_strategy="ranked",
+                 sources=("Sentinel-1", "Sentinel-2"),
                  inference_index=None, verbose=False):
 
         self.usage = usage
@@ -38,8 +39,10 @@ class pixelDataset(Dataset):
 
         if self.usage in ["train", "validation"]:
 
-            s1_dir = Path(root_dir).joinpath(self.sources[0], self.usage, "categories")
-            s2_dir = Path(root_dir).joinpath(self.sources[1], self.usage, "categories")
+            assert num_samples is not None
+
+            s1_dir = Path(root_dir).joinpath("Ghana", self.sources[0], self.usage, "categories")
+            s2_dir = Path(root_dir).joinpath("Ghana", self.sources[1], self.usage, "categories")
             categories = [name for name in os.listdir(s1_dir) if os.path.isdir(os.path.join(s1_dir, name))]
 
             s1_samples_ls = []
@@ -160,7 +163,7 @@ class pixelDataset(Dataset):
 
             s2_dir = Path(root_dir).joinpath(self.sources[1])
             s2_fnames = [Path(dirpath) / f for (dirpath, dirnames, filenames) in os.walk(s2_dir) for f in filenames if
-                         f.endswith(".npy")]
+                         f.endswith(".npy") if "source" in f]
             s2_meta_fnames = [Path(dirpath) / f for (dirpath, dirnames, filenames) in os.walk(s2_dir) for f in filenames
                               if f.endswith(".pickle")]
             s2_fnames.sort()
@@ -168,18 +171,20 @@ class pixelDataset(Dataset):
 
             s1_grid_id = str(s1_fnames[inference_index]).split("_")[-1].replace(".npy", "")
             s2_grid_id = str(s2_fnames[inference_index]).split("_")[-1].replace(".npy", "")
-            s1_grid_meta = str(s1_meta_fnames[inference_index]).split("_")[-2]
-            s2_grid_meta = str(s2_meta_fnames[inference_index]).split("_")[-2]
-            assert s1_grid_id == s2_grid_id == s1_grid_meta == s2_grid_meta
+            s1_grid_meta_id = str(s1_meta_fnames[inference_index]).split("_")[-2]
+            s2_grid_meta_id = str(s2_meta_fnames[inference_index]).split("_")[-2]
+            assert s1_grid_id == s2_grid_id == s1_grid_meta_id == s2_grid_meta_id
 
             self.tile_id = s1_grid_id
             self.meta = pd.read_pickle(s1_meta_fnames[0])
 
             s1_array = np.load(s1_fnames[inference_index])
+            s1_array = s1_array * 1e-7
             # s1_array = nn.ConstantPad1d((0, s1_max_len - s1_array.shape[0]), 0)(torch.transpose(s1_array, 1, 0))
             # s1_array = torch.transpose(s1_array, 1, 0)
 
             s2_array = np.load(s2_fnames[inference_index])
+            s2_array = s2_array * 1e-7
             # s2_array = nn.ConstantPad1d((0, s2_max_len - s2_array.shape[0]), 0)(torch.transpose(s2_array, 1, 0))
             # s2_array = torch.transpose(s2_array, 1, 0)
 
