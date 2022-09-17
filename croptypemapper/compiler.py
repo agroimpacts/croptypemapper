@@ -20,21 +20,17 @@ class ModelCompiler:
         working_dir (sys.path or str) -- path to the working directory.
         out_dir (sys.path or str) -- Path to the directory to store output prediction and associated files.
         gpuDevices (tuple) -- indices of gpu devices to use.
-        br_weights (tuple) -- weights to decide the influence of each triple branchs
-                              in the LSTM model (e.g. s1, s2, fused).
         params_init (sys.path or str) -- Path to the saved model parameters to load.
         freeze_params (list of int) -- list of indices of the trainable layers in the network to freeze the gradients.
                                        Useful in fine-tunning the model.
     """
 
-    def __init__(self, model, working_dir, out_dir, gpuDevices=(0),
-                 br_weights=(0.3, 0.3, 0.4), params_init=None, freeze_params=None):
+    def __init__(self, model, working_dir, out_dir, gpuDevices=(0),params_init=None, freeze_params=None):
 
         self.s3_client = boto3.client("s3")
         self.working_dir = working_dir
         self.out_dir = out_dir
         self.gpuDevices = gpuDevices
-        self.br_weights = br_weights
         self.model = model
 
         self.model_name = self.model.__class__.__name__
@@ -135,9 +131,9 @@ class ModelCompiler:
 
         elif LR_policy == "PolynomialLR":
             scheduler = PolynomialLR(optimizer,
-                                     max_decay_steps=100,
+                                     max_decay_steps=75,
                                      min_learning_rate=1e-5,
-                                     power=0.9)
+                                     power=0.95)
         else:
             scheduler = None
 
@@ -153,9 +149,8 @@ class ModelCompiler:
             print("[{}/{}]".format(t + 1, epochs))
             # start fitting
             start_epoch = datetime.now()
-            train(trainDataset, self.model, train_criterion, optimizer, self.br_weights, gpu=self.gpu,
-                  train_loss=train_loss)
-            validate(valDataset, self.model, val_criterion, self.br_weights, gpu=self.gpu, val_loss=val_loss)
+            train(trainDataset, self.model, train_criterion, optimizer, gpu=self.gpu, train_loss=train_loss)
+            validate(valDataset, self.model, val_criterion, gpu=self.gpu, val_loss=val_loss)
 
             # Update the scheduler
             if LR_policy in ["StepLR", "Exponential"]:
@@ -178,17 +173,20 @@ class ModelCompiler:
 
         print("--------------- Training finished in {}s ---------------".format((datetime.now() - start).seconds))
 
-    def accuracy_evaluation(self, evalDataset, outPrefix, weights, bucket=None):
+    def accuracy_evaluation(self, evalDataset, outPrefix, bucket=None):
 
-        if not os.path.exists(Path(self.working_dir) / self.out_dir):
-            os.makedirs(Path(self.working_dir) / self.out_dir)
+        if outPrefix is None:
+          outPrefix = Path(self.working_dir) / self.out_dir
+          
+        if not os.path.exists(outPrefix):
+          os.makedirs(outPrefix)
 
-        os.chdir(Path(self.working_dir) / self.out_dir)
+        os.chdir(outPrefix)
 
         print("--------------- Start evaluation ---------------")
         start = datetime.now()
 
-        accuracy_evaluation(evalDataset, self.model, self.gpu, outPrefix, self.br_weights, bucket)
+        accuracy_evaluation(evalDataset, self.model, self.gpu, outPrefix, bucket)
 
         print("--------------- Evaluation finished in {}s ---------------".format((datetime.now() - start).seconds))
 
@@ -210,7 +208,7 @@ class ModelCompiler:
 
         os.chdir(Path(out_prefix))
 
-        inference(predDataset, self.model, prefix_soft, prefix_hard, gpu=self.gpu, weights=self.br_weights)
+        inference(predDataset, self.model, prefix_soft, prefix_hard, gpu=self.gpu)
 
         duration_in_sec = (datetime.now() - start).seconds
         duration_format = str(timedelta(seconds=duration_in_sec))

@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from pathlib import Path
 
 
-def inference(testData, model, score_path, pred_path, gpu, weights):
+def inference(testData, model, score_path, pred_path, gpu):
+    
     testData, meta, tile_id = testData
 
     meta_hard = meta.copy()
@@ -37,8 +38,8 @@ def inference(testData, model, score_path, pred_path, gpu, weights):
             s1_img = s1_img.cuda()
             s2_img = s2_img.cuda()
 
-        s1_model_out, s2_model_out, fused_model_out = model(s1_img, s2_img)
-        pred_logits = s1_model_out * weights[0] + s2_model_out * weights[1] + fused_model_out * weights[2]
+        #set_trace()
+        pred_logits = model(s1_img, s2_img)
         pred_prob = F.softmax(pred_logits, 1)
 
         batch, nclass = pred_prob.size()

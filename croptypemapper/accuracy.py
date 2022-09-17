@@ -5,7 +5,7 @@ from torch.autograd import Variable
 from .metrics import BinaryMetrics
 from pathlib import Path
 
-def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None):
+def accuracy_evaluation(eval_data, model, gpu, out_prefix, bucket=None):
     """
     Evaluate model
     Params:
@@ -23,9 +23,9 @@ def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None)
 
     for s1_img, s2_img, label in eval_data:
         s1_img = Variable(s1_img, requires_grad=False)  # shape=(B,T,C)
-        s1_img[s1_img != s1_img] = 0
+        #s1_img[s1_img != s1_img] = 0
         s2_img = Variable(s2_img, requires_grad=False)
-        s2_img[s2_img != s2_img] = 0
+        #s2_img[s2_img != s2_img] = 0
         label = Variable(label, requires_grad=False)  # shape=1
 
         if gpu:
@@ -37,8 +37,7 @@ def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None)
         # model_out_prob = F.softmax(model_out, 1)
         # model_out_prob = F.softmax(out_logits, 1)
 
-        s1_model_out, s2_model_out, fused_model_out = model(s1_img, s2_img)
-        out_logits = s1_model_out * weights[0] + s2_model_out * weights[1] + fused_model_out * weights[2]
+        out_logits = model(s1_img, s2_img)
         model_out_prob = F.softmax(out_logits, 1)
 
         batch, nclass = model_out_prob.size()
@@ -47,14 +46,14 @@ def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None)
             label_batch = label[i].cpu().numpy()
             batch_pred = model_out_prob.max(dim=1)[1].data[i].cpu().numpy()
 
-            for n in range(1, nclass):
-                class_out = model_out_prob[:, n].data[i].cpu().numpy()
-                class_pred = np.where(batch_pred == n, 1, 0)
-                class_label = np.where(label_batch == n, 1, 0)
+            for z in range(nclass):
+                class_out = model_out_prob[:, z].data[i].cpu().numpy()
+                class_pred = np.where(batch_pred == z, 1, 0)
+                class_label = np.where(label_batch == z, 1, 0)
                 pixel_metrics = BinaryMetrics(class_label, class_out, class_pred)
 
                 try:
-                    metrics[n - 1].append(pixel_metrics)
+                    metrics[z].append(pixel_metrics)
                 except:
                     metrics.append([pixel_metrics])
     # set_trace()
@@ -70,7 +69,7 @@ def accuracy_evaluation(eval_data, model, gpu, out_prefix, weights, bucket=None)
         "IoU": [m.iou() for m in metrics],
         "mIoU": [m.miou() for m in metrics],
         "TSS": [m.tss() for m in metrics]
-    }, index=["class_{}".format(m) for m in range(1, len(metrics) + 1)])
+    }, index=["class_{}".format(m) for m in range(len(metrics))])
 
     if bucket:
         metrics_path = f"s3://{bucket}/{out_prefix}/Metrics.csv"
