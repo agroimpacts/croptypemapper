@@ -37,6 +37,19 @@ def load_data(dataPath, isLabel=False):
 
 ##########################################################################
 
+def make_reproducible(seed=42, cudnn=True):
+    """Make all the randomization processes start from a shared seed"""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.random.manual_seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    if cudnn:
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+
+##########################################################################
+
 def get_test_pixel_coord(img_cube):
     x_ls = range(img_cube.shape[1])
     y_ls = range(img_cube.shape[2])
