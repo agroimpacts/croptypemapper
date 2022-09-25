@@ -133,7 +133,7 @@ class pixelDataset(Dataset):
             assert s1_grid_id == s2_grid_id == s1_grid_meta_id == s2_grid_meta_id
 
             self.tile_id = s1_grid_id
-            self.meta = pd.read_pickle(s1_meta_fnames[0])
+            self.meta = pd.read_pickle(s1_meta_fnames[inference_index])
 
             s1_array = np.load(s1_fnames[inference_index])
             s1_array = s1_array * 1e-7
