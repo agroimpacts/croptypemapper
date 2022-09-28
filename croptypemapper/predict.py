@@ -21,7 +21,6 @@ def inference(testData, model, score_path, pred_path, gpu):
         "dtype": "float32"
     })
 
-    name_prob = "prob_{}.tif".format(tile_id)
     name_crisp = "crisp_{}.tif".format(tile_id)
 
     model.eval()
@@ -50,8 +49,8 @@ def inference(testData, model, score_path, pred_path, gpu):
             out_predict = np.expand_dims(out_predict, axis=0).astype(np.int8)
             h_canvas[:, index[0], index[1]] = out_predict
 
-            for n in range(nclass - 1):
-                out_softScore = pred_prob[:, n + 1].data[i].cpu().numpy() * 100
+            for n in range(nclass):
+                out_softScore = pred_prob[:, n].data[i].cpu().numpy() * 100
                 out_softScore = np.expand_dims(out_softScore, axis=0).astype(np.float32)
                 try:
                     canvas_softScore_ls[n][:, index[0], index[1]] = out_softScore
@@ -64,6 +63,7 @@ def inference(testData, model, score_path, pred_path, gpu):
     with rasterio.open(Path(pred_path) / name_crisp, "w", **meta_hard) as dst:
         dst.write(h_canvas)
 
-    for n in range(1, len(canvas_softScore_ls)):
+    for n in range(len(canvas_softScore_ls)):
+        name_prob = f"prob_{tile_id}_{n}.tif"
         with rasterio.open(Path(score_path) / name_prob, "w", **meta_soft) as dst:
             dst.write(canvas_softScore_ls[n])
