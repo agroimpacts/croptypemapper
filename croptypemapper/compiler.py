@@ -18,14 +18,18 @@ class ModelCompiler:
     Args:
         model (''nn.Module'') -- pytorch model for segmentation.
         working_dir (sys.path or str) -- path to the working directory.
-        out_dir (sys.path or str) -- Path to the directory to store output prediction and associated files.
+        out_dir (sys.path or str) -- Path to the directory to store output 
+            prediction and associated files.
         gpuDevices (tuple) -- indices of gpu devices to use.
-        params_init (sys.path or str) -- Path to the saved model parameters to load.
-        freeze_params (list of int) -- list of indices of the trainable layers in the network to freeze the gradients.
-                                       Useful in fine-tunning the model.
+        params_init (sys.path or str) -- Path to the saved model parameters to 
+            load.
+        freeze_params (list of int) -- list of indices of the trainable layers 
+            in the network to freeze the gradients. Useful in fine-tunning the 
+            model.
     """
 
-    def __init__(self, model, working_dir, out_dir, gpuDevices=(0),params_init=None, freeze_params=None):
+    def __init__(self, model, working_dir, out_dir, gpuDevices=(0),
+                 params_init=None, freeze_params=None):
 
         self.s3_client = boto3.client("s3")
         self.working_dir = working_dir
@@ -45,7 +49,9 @@ class ModelCompiler:
             # GPU setting
             if gpuDevices:
                 torch.cuda.set_device(gpuDevices[0])
-                self.model = torch.nn.DataParallel(self.model, device_ids=gpuDevices)
+                self.model = torch.nn.DataParallel(
+                    self.model, device_ids=gpuDevices
+                )
             self.model = self.model.cuda()
 
         num_params = sum([p.numel() for p in self.model.parameters() if p.requires_grad])

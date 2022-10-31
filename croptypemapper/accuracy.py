@@ -11,8 +11,8 @@ def accuracy_evaluation(eval_data, model, gpu, out_prefix, bucket=None):
     Params:
         eval_data (''DataLoader'') -- Batch grouped data
         model -- Trained model for validation
-        buffer: Buffer added to the targeted grid when creating dataset. This allows metrics to calculate only
-            at non-buffered region
+        buffer: Buffer added to the targeted grid when creating dataset. 
+            This allows metrics to calculate only at non-buffered region
         gpu (binary,optional): Decide whether to use GPU, default is True
         bucket (str): name of s3 bucket to save metrics
         outPrefix (str): s3 prefix to save metrics
