@@ -1,7 +1,7 @@
 # croptypemapper
-This repo contains code for running recurrent neural network-based models (currently a Long Short-Term Memory Network) designed to do pixel-wise predictions of crop types at 10 m resolution using time series (typically 1 year) of Sentinel-1 and 2 data. This code is being developed as part of the Enabling Crop Analytics at Scale project.  
+This repo contains code for running temporal convolutional neural networks and Long Short-Term Memory Networks designed to map crop types at 10 m resolution using time series (typically 1 year) of Sentinel-1 and 2 data. This code was developed as part of the Enabling Crop Analytics at Scale project.  
 
-The models are still being actively developed, as is the code-base. The model can currently be run using the code provided for both training and inference.  
+The models is still being actively developed, as is the code-base. The model can currently be run using the code provided for both training and inference.  
 
 A notebook demonstrating the use of a pre-trained model for predicting crop types within Google's colab environment is currently available [here](https://github.com/agroimpacts/croptypemapper/blob/main/croptypemapper/notebooks/predict_croptypes_colab_demo.ipynb). To run the notebook, several set of files are required, including:
 
